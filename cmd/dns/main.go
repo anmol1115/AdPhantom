@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func handleTCPConn(conn net.Conn) {
@@ -33,6 +37,13 @@ func handleUDPConn(conn *net.UDPConn) {
 }
 
 func main() {
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
 	// TCP part
 	go func() {
 		ln, err := net.Listen("tcp", ":53")
@@ -64,4 +75,7 @@ func main() {
 
 		handleUDPConn(udpConn)
 	}()
+
+	<-ctx.Done()
+	log.Println("Exiting main thread")
 }
