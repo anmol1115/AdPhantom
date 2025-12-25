@@ -1,0 +1,14 @@
+services:
+  dns:
+    container_name: dns-adblocker
+    build:
+      context: ../../
+      dockerfile: deployments/docker/dns/Dockerfile
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+
+networks:
+  app_net:
+    name: AddPhantomNet
+    driver: bridge
