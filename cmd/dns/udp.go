@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func UdpListener() {
+func udpListener() {
 	udpAddr, err := net.ResolveUDPAddr("udp", ":53")
 	if err != nil {
 		log.Fatal(err)

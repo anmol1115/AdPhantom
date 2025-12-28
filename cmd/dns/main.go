@@ -10,13 +10,14 @@ import (
 	"github.com/anmol1115/AdPhantom/internal/config"
 )
 
+const CONFIG_PATH string = "/app/configs/config.ini"
+
 func main() {
-	cfg, err := config.LoadConfig("/app/configs/config.ini")
+	_, err := config.LoadConfig(CONFIG_PATH)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	log.Println(cfg.Logging.Level) // remove: only for debugging
 
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
@@ -25,8 +26,9 @@ func main() {
 	)
 	defer stop()
 
-	go TcpListener()
-	go UdpListener()
+	go startConfigWatcher(ctx, CONFIG_PATH)
+	go tcpListener()
+	go udpListener()
 
 	<-ctx.Done()
 	log.Println("Exiting main thread")

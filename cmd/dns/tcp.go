@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func TcpListener() {
+func tcpListener() {
 	ln, err := net.Listen("tcp", ":53")
 	if err != nil {
 		log.Fatal(err)
