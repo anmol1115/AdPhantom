@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
+	"errors"
 	"io"
 	"log"
 	"net"
 
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
+	"github.com/miekg/dns"
 )
 
 func tcpListener(ctx context.Context) {
@@ -52,16 +55,39 @@ func handleTCPConn(ctx context.Context, conn net.Conn) {
 		log.Fatal(err)
 	}
 
-	b := make([]byte, 2048)
+	lengthBytes := make([]byte, 2)
 	for {
-		n, err := conn.Read(b)
-		if err == io.EOF {
+		_, err := io.ReadFull(conn, lengthBytes)
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
+				return
+			}
+
+			logger.Error(err.Error())
 			return
 		}
+
+		msgLength := binary.BigEndian.Uint16(lengthBytes)
+		msg := make([]byte, msgLength)
+		_, err = io.ReadFull(conn, msg)
+		if err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
+				return
+			}
+
+			logger.Error(err.Error())
+			return
+		}
+
+		var dnsMsg dns.Msg
+		err = dnsMsg.Unpack(msg)
 		if err != nil {
 			logger.Error(err.Error())
 			return
 		}
-		log.Println(string(b[:n]))
+
+		for _, q := range dnsMsg.Question {
+			log.Println("Query: ", q.Name)
+		}
 	}
 }
