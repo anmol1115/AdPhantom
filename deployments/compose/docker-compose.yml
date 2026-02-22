@@ -9,6 +9,7 @@ services:
       - "53:53/tcp"
     volumes:
       - ../../configs:/app/configs
+      - ../../logs:/app/logs
 
 networks:
   app_net:

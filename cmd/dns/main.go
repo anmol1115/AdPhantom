@@ -8,15 +8,23 @@ import (
 	"syscall"
 
 	"github.com/anmol1115/AdPhantom/internal/config"
+	Logger "github.com/anmol1115/AdPhantom/internal/logger"
 )
 
-const CONFIG_PATH string = "/app/configs/config.ini"
+const (
+	CONFIG_PATH  string = "/app/configs/config.ini"
+	LOGFILE_PATH string = "/app/logs/app.log"
+)
 
 func main() {
-	_, err := config.LoadConfig(CONFIG_PATH)
+	cfg, err := config.LoadConfig(CONFIG_PATH)
 	if err != nil {
 		log.Fatal(err)
-		return
+	}
+
+	logger, err := Logger.Init(&cfg.Logging, LOGFILE_PATH)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	ctx, stop := signal.NotifyContext(
@@ -26,10 +34,11 @@ func main() {
 	)
 	defer stop()
 
-	go startConfigWatcher(ctx, CONFIG_PATH)
-	go tcpListener()
-	go udpListener()
+	ctx = Logger.WithLogger(ctx, logger)
+
+	go tcpListener(ctx)
+	go udpListener(ctx)
 
 	<-ctx.Done()
-	log.Println("Exiting main thread")
+	logger.Debug("Exiting main thread")
 }
