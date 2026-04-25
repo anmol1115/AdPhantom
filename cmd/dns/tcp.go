@@ -104,7 +104,7 @@ func handleTCPConn(ctx context.Context, conn net.Conn) {
 		}
 
 		for _, q := range dnsMsg.Question {
-			log.Println("Query: ", q.Name)
+			logger.Debug("Query: ", q.Name)
 		}
 	}
 }

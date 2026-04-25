@@ -55,6 +55,6 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 			logger.Error(err.Error())
 			continue
 		}
-		log.Println(addr, string(b[:n]))
+		logger.Debug(addr.String(), string(b[:n]))
 	}
 }

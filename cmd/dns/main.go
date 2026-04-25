@@ -35,6 +35,7 @@ func main() {
 	defer stop()
 
 	ctx = Logger.WithLogger(ctx, logger)
+	ctx = config.WithDns(ctx, &cfg.DNS)
 
 	go tcpListener(ctx)
 	go udpListener(ctx)
