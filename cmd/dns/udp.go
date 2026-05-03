@@ -29,13 +29,10 @@ func udpListener(ctx context.Context) {
 	}
 	defer udpConn.Close()
 
-	go func() {
-		<-ctx.Done()
-		logger.Debug("Closing UDP listener")
-		udpConn.Close()
-	}()
-
 	go handleUDPConn(ctx, udpConn)
+
+	<-ctx.Done()
+	logger.Debug("Closing UDP listener")
 }
 
 func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
