@@ -14,7 +14,7 @@ func WithDns(ctx context.Context, d *Dns) context.Context {
 func DnsFromContext(ctx context.Context) (*Dns, error) {
 	d, ok := ctx.Value(contextKey{}).(*Dns)
 	if !ok {
-		return d, errors.New("Logger not present in the context")
+		return d, errors.New("Dns not present in the context")
 	}
 	return d, nil
 }
