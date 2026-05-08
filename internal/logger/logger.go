@@ -12,7 +12,7 @@ type LogLevel int
 
 const (
 	Debug LogLevel = iota
-	Warn
+	Info
 	Error
 )
 
@@ -30,8 +30,8 @@ func convertLogLevel(level string) (LogLevel, error) {
 		return Debug, nil
 	case "error":
 		return Error, nil
-	case "warning":
-		return Warn, nil
+	case "info":
+		return Info, nil
 	}
 	return Debug, errors.New("Invalid log level")
 }
@@ -65,8 +65,8 @@ func (l *Logger) Debug(msg ...string) {
 	l.logger.Println("[DEBUG]", msg)
 }
 
-func (l *Logger) Warn(msg ...string) {
-	if l.Level > Warn {
+func (l *Logger) Info(msg ...string) {
+	if l.Level > Info {
 		return
 	}
 	l.logger.Println("[WARN]", msg)
