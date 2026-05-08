@@ -69,7 +69,7 @@ func (l *Logger) Info(msg ...string) {
 	if l.Level > Info {
 		return
 	}
-	l.logger.Println("[WARN]", msg)
+	l.logger.Println("[INFO]", msg)
 }
 
 func (l *Logger) Error(msg ...string) {

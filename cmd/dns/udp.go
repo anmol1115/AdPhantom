@@ -5,7 +5,9 @@ import (
 	"log"
 	"net"
 
+	helper "github.com/anmol1115/AdPhantom/internal/dns"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
+	Resolver "github.com/anmol1115/AdPhantom/internal/resolver"
 )
 
 func udpListener(ctx context.Context) {
@@ -41,6 +43,12 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 		log.Fatal(err)
 	}
 
+	resolver, err := Resolver.FromContext(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
 	b := make([]byte, 2048)
 	for {
 		n, addr, err := conn.ReadFromUDP(b)
@@ -52,6 +60,26 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 			logger.Error(err.Error())
 			continue
 		}
-		logger.Debug(addr.String(), string(b[:n]))
+		logger.Debug("Ingcoming request from ", addr.String())
+
+		logger.Info("Parsing query")
+		name, qtype, id, err := helper.ParseQuery(b[:n])
+		if err != nil {
+			logger.Error(err.Error())
+			return
+		}
+
+		logger.Info("Resolving domain")
+		resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
+
+		var response []byte
+		if err != nil {
+			logger.Error(err.Error())
+			response = helper.BuildNXDomain(id)
+		} else {
+			response = helper.BuildResponse(id, resolvedAddr)
+		}
+
+		conn.WriteToUDP(response, addr)
 	}
 }

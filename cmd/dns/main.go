@@ -9,6 +9,7 @@ import (
 
 	"github.com/anmol1115/AdPhantom/internal/config"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
+	"github.com/anmol1115/AdPhantom/internal/resolver"
 )
 
 const (
@@ -27,6 +28,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	res := resolver.New(&cfg.DNS)
+
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
@@ -35,7 +38,7 @@ func main() {
 	defer stop()
 
 	ctx = Logger.WithLogger(ctx, logger)
-	ctx = config.WithDns(ctx, &cfg.DNS)
+	ctx = resolver.WithResolver(ctx, res)
 
 	go tcpListener(ctx)
 	go udpListener(ctx)
