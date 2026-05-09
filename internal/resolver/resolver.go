@@ -35,9 +35,9 @@ func newUpstreamResolver(upstream string) *net.Resolver {
 func (r *Resolver) Resolve(ctx context.Context, name, qtype string) ([]netip.Addr, error) {
 	switch qtype {
 	case "A":
-		addrs, err := r.primary.LookupNetIP(ctx, "ip", name)
+		addrs, err := r.primary.LookupNetIP(ctx, "ip4", name)
 		if err != nil {
-			addrs, err = r.failover.LookupNetIP(ctx, "ip", name)
+			addrs, err = r.failover.LookupNetIP(ctx, "ip4", name)
 		}
 
 		return addrs, err
