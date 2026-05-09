@@ -77,7 +77,7 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 			logger.Error(err.Error())
 			response = helper.BuildNXDomain(id)
 		} else {
-			response = helper.BuildResponse(id, resolvedAddr)
+			response = helper.BuildResponse(id, b[:n], resolvedAddr)
 		}
 
 		conn.WriteToUDP(response, addr)
