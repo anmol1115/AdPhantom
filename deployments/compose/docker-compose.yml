@@ -1,6 +1,6 @@
 services:
   dns:
-    container_name: dns-adblocker
+    container_name: dns-adphantom
     build:
       context: ../../
       dockerfile: deployments/docker/dns/Dockerfile
