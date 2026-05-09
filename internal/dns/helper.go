@@ -7,13 +7,11 @@ import (
 	"strings"
 )
 
-func ParseQuery(msg []byte) (name, qtype string, id uint16, err error) {
+func ParseQuery(msg []byte) (name, qtype string, err error) {
 	// Headers not even set properly
 	if len(msg) < 12 {
-		return "", "", 0, errors.New("message too short")
+		return "", "", errors.New("message too short")
 	}
-
-	id = binary.BigEndian.Uint16(msg[0:2])
 
 	// skip 12 byte header
 	offset := 12
@@ -21,7 +19,7 @@ func ParseQuery(msg []byte) (name, qtype string, id uint16, err error) {
 	var labels []string
 	for {
 		if offset >= len(msg) {
-			return "", "", 0, errors.New("question not found")
+			return "", "", errors.New("question not found")
 		}
 		labelLength := int(msg[offset])
 		offset += 1
@@ -31,7 +29,7 @@ func ParseQuery(msg []byte) (name, qtype string, id uint16, err error) {
 		}
 
 		if offset+labelLength >= len(msg) {
-			return "", "", 0, errors.New("Lable out of bounds")
+			return "", "", errors.New("Lable out of bounds")
 		}
 		labels = append(labels, string(msg[offset:offset+labelLength]))
 		offset += labelLength
@@ -40,7 +38,7 @@ func ParseQuery(msg []byte) (name, qtype string, id uint16, err error) {
 	name = strings.Join(labels, ".")
 
 	if offset+4 > len(msg) {
-		return "", "", 0, errors.New("missing qtype/qclass")
+		return "", "", errors.New("missing qtype/qclass")
 	}
 
 	qtypeInt := binary.BigEndian.Uint16(msg[offset : offset+2])
@@ -53,37 +51,30 @@ func ParseQuery(msg []byte) (name, qtype string, id uint16, err error) {
 		qtype = "UNSUPPORTED"
 	}
 
-	return name, qtype, id, nil
+	return name, qtype, nil
 }
 
-func BuildNXDomain(id uint16) []byte {
+func BuildNXDomain(msg []byte) []byte {
 	resp := make([]byte, 12)
-	binary.BigEndian.PutUint16(resp[0:2], id)
+	id := msg[:2]
+	resp = append(resp, id...)
 	// flags: QR=1, RCODE=3 (NXDOMAIN)
 	binary.BigEndian.PutUint16(resp[2:4], 0x8003)
 	return resp
 }
 
-func BuildResponse(id uint16, msg []byte, addrs []netip.Addr) []byte {
-	// find end of question section
-	offset := 12
-	for msg[offset] != 0 {
-		offset += int(msg[offset]) + 1
-	}
-	offset++    // skip null terminator
-	offset += 4 // skip qtype and qclass
-	questionSection := msg[12:offset]
+func BuildResponse(msg []byte, addrs []netip.Addr) []byte {
+	var resp []byte
 
-	resp := make([]byte, 12)
-	binary.BigEndian.PutUint16(resp[0:2], id)
-	binary.BigEndian.PutUint16(resp[2:4], 0x8000)
-	binary.BigEndian.PutUint16(resp[4:6], 1)                  // question count
-	binary.BigEndian.PutUint16(resp[6:8], uint16(len(addrs))) // answer count
-
-	resp = append(resp, questionSection...)
+	resp = append(resp, msg...)
+	// set QR bit to 1 in header flags
+	resp[2] = resp[2] | 0x80
+	// set ANCOUNT to count of answers
+	binary.BigEndian.PutUint16(resp[6:8], uint16(len(addrs)))
 
 	for _, addr := range addrs {
-		resp = append(resp, 0xC0, 0x0C)
+		resp = append(resp, 0xc0, 0x0c)
+
 		if addr.Is4() {
 			resp = binary.BigEndian.AppendUint16(resp, 1)
 			resp = binary.BigEndian.AppendUint16(resp, 1)

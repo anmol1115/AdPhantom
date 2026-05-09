@@ -34,12 +34,18 @@ func newUpstreamResolver(upstream string) *net.Resolver {
 
 func (r *Resolver) Resolve(ctx context.Context, name, qtype string) ([]netip.Addr, error) {
 	switch qtype {
-	case "A", "AAAA":
+	case "A":
 		addrs, err := r.primary.LookupNetIP(ctx, "ip", name)
 		if err != nil {
 			addrs, err = r.failover.LookupNetIP(ctx, "ip", name)
 		}
 
+		return addrs, err
+	case "AAAA":
+		addrs, err := r.primary.LookupNetIP(ctx, "ip6", name)
+		if err != nil {
+			addrs, err = r.failover.LookupNetIP(ctx, "ip6", name)
+		}
 		return addrs, err
 	default:
 		return nil, errors.New("Unsupported qtype")

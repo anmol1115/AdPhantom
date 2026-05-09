@@ -63,7 +63,7 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 		logger.Debug("Ingcoming request from ", addr.String())
 
 		logger.Info("Parsing query")
-		name, qtype, id, err := helper.ParseQuery(b[:n])
+		name, qtype, err := helper.ParseQuery(b[:n])
 		if err != nil {
 			logger.Error(err.Error())
 			return
@@ -75,9 +75,9 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 		var response []byte
 		if err != nil {
 			logger.Error(err.Error())
-			response = helper.BuildNXDomain(id)
+			response = helper.BuildNXDomain(b[:n])
 		} else {
-			response = helper.BuildResponse(id, b[:n], resolvedAddr)
+			response = helper.BuildResponse(b[:n], resolvedAddr)
 		}
 
 		conn.WriteToUDP(response, addr)
