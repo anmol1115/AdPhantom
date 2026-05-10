@@ -51,25 +51,26 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 
 	b := make([]byte, 2048)
 	for {
+		logger.Debug("UDP: Reading byte length of request")
 		n, addr, err := conn.ReadFromUDP(b)
 		if err != nil {
 			if ctx.Err() != nil {
-				logger.Debug("Closing UDP Listener")
+				logger.Debug("UDP: Closing UDP Listener")
 				return
 			}
 			logger.Error(err.Error())
 			continue
 		}
-		logger.Debug("Ingcoming request from ", addr.String())
+		logger.Debug("UDP: Ingcoming request from ", addr.String())
 
-		logger.Info("Parsing query")
+		logger.Debug("UDP: Parsing query")
 		name, qtype, err := helper.ParseQuery(b[:n])
 		if err != nil {
 			logger.Error(err.Error())
 			return
 		}
 
-		logger.Info("Resolving domain")
+		logger.Debug("UDP: Resolving domain")
 		resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
 
 		var response []byte
@@ -80,6 +81,7 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 			response = helper.BuildResponse(b[:n], resolvedAddr)
 		}
 
+		logger.Debug("UDP: Sending response")
 		conn.WriteToUDP(response, addr)
 	}
 }
