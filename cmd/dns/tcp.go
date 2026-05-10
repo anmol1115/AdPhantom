@@ -7,10 +7,10 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 
+	helper "github.com/anmol1115/AdPhantom/internal/dns"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
-	"github.com/miekg/dns"
+	Resolover "github.com/anmol1115/AdPhantom/internal/resolver"
 )
 
 func tcpListener(ctx context.Context) {
@@ -60,51 +60,64 @@ func handleTCPConn(ctx context.Context, conn net.Conn) {
 		conn.Close()
 	}()
 
-	lengthBytes := make([]byte, 2)
-	var dnsMsg dns.Msg
+	resolver, err := Resolover.FromContext(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
 
+	requestLength := make([]byte, 2)
 	for {
 		logger.Debug("TCP: Reading byte length of request")
-		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-		_, err := io.ReadFull(conn, lengthBytes)
+		_, err = io.ReadFull(conn, requestLength)
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
 				return
 			}
-
 			logger.Error(err.Error())
 			return
 		}
 
-		logger.Debug("TCP: Reading request message")
-		msgLength := binary.BigEndian.Uint16(lengthBytes)
+		msgLength := binary.BigEndian.Uint16(requestLength)
 		if msgLength == 0 || msgLength > 4096 {
-			logger.Error("TCP: Invalid length of message received")
+			logger.Error("TCP: Invalid length of request message")
 			return
 		}
 
+		logger.Debug("TCP: Reading request message")
 		msg := make([]byte, msgLength)
-		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 		_, err = io.ReadFull(conn, msg)
 		if err != nil {
 			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) {
 				return
 			}
-
 			logger.Error(err.Error())
 			return
 		}
 
-		logger.Debug("TCP: Parsing request")
-		dnsMsg = dns.Msg{}
-		err = dnsMsg.Unpack(msg)
+		logger.Debug("TCP: Parsing query")
+		name, qtype, err := helper.ParseQuery(msg)
 		if err != nil {
 			logger.Error(err.Error())
 			return
 		}
 
-		for _, q := range dnsMsg.Question {
-			logger.Debug("Query: ", q.Name)
+		logger.Debug("TCP: Resolving domain")
+		resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
+
+		var tmp []byte
+		if err != nil {
+			logger.Error(err.Error())
+			tmp = helper.BuildNXDomain(msg)
+		} else {
+			tmp = helper.BuildResponse(msg, resolvedAddr)
 		}
+
+		logger.Debug("TCP: Sending response")
+		var response []byte
+		response = binary.BigEndian.AppendUint16(response, uint16(len(tmp)))
+		response = append(response, tmp...)
+
+		conn.Write(response)
 	}
 }
