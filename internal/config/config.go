@@ -7,6 +7,7 @@ import (
 type Config struct {
 	Logging LoggingConfig `ini:"logging"`
 	DNS     Dns           `ini:"dns"`
+	Filter  Filter        `ini:"filter"`
 }
 
 type LoggingConfig struct {
@@ -18,6 +19,10 @@ type LoggingConfig struct {
 type Dns struct {
 	Upstream         string `ini:"upstream"`
 	UpstreamFailover string `ini:"upstream_failover"`
+}
+
+type Filter struct {
+	Lists string `ini:"lists"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {

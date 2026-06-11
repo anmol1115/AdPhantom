@@ -1,0 +1,48 @@
+# Simple domain block
+0.0.0.0 ads.example.com
+127.0.0.1 tracker.example.com
+
+# Hosts-style (no IP prefix)
+doubleclick.net
+googleadservices.com
+
+# Blank lines and comments should be ignored
+
+# Trailing comments on rules
+0.0.0.0 malware.example.com # known malware host
+
+# Inline whitespace variations
+0.0.0.0   spaced.example.com
+  leading-space.example.com
+
+# Subdomains (for testing your subdomain walk later)
+sub.ads.example.com
+deep.sub.ads.example.com
+
+# AdBlock-style rules (common in real lists)
+||adserver.example.com^
+||tracking.example.net^$third-party
+
+# Wildcard rules (for step 3)
+*.ads.example.org
+*.tracker.example.org
+
+# Edge cases
+localhost
+0.0.0.0 0.0.0.0        # self-referential, should be skipped
+127.0.0.1 localhost     # should be skipped
+
+# --- ALLOWLIST ---
+
+# AdBlock-style allow (@@)
+@@||safe.example.com^
+@@||legit.googleadservices.com^$third-party
+
+# Allow a specific subdomain that would otherwise match a blocked parent
+@@||cdn.ads.example.com^
+
+# Plain allow (custom marker)
+!allow trusted.example.net
+
+# Allow with wildcard (for step 3)
+@@||*.safe.example.org^

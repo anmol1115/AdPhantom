@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/anmol1115/AdPhantom/internal/blocker"
 	"github.com/anmol1115/AdPhantom/internal/config"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
 	"github.com/anmol1115/AdPhantom/internal/resolver"
@@ -24,6 +25,11 @@ func main() {
 	}
 
 	logger, err := Logger.Init(&cfg.Logging, LOGFILE_PATH)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = blocker.LoadFilterRules(cfg.Filter.Lists)
 	if err != nil {
 		log.Fatal(err)
 	}
