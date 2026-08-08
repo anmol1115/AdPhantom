@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"path/filepath"
 )
 
 func LoadFilterRules(path string) error {
@@ -21,7 +22,7 @@ func LoadFilterRules(path string) error {
 		return err
 	}
 	for _, file := range filterFiles {
-		err := parseFile(file.Name())
+		_, err := parseFile(filepath.Join(path, file.Name()))
 		if err != nil {
 			return err
 		}
@@ -30,18 +31,41 @@ func LoadFilterRules(path string) error {
 	return nil
 }
 
-func parseFile(path string) error {
+func parseFile(path string) ([]*Rule, error) {
+	var rules []*Rule
+
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return rules, err
 	}
 
 	for line := range bytes.SplitSeq(data, []byte{'\n'}) {
 		line = bytes.TrimSpace(line)
-		if len(line) == 0 || bytes.HasPrefix(line, []byte{'#'}) {
+		if bytes.Contains(line, []byte{'$'}) {
+			index := bytes.Index(line, []byte{'$'})
+			line = line[:index]
+		}
+		if len(line) == 0 || bytes.HasPrefix(line, []byte{'#'}) || bytes.HasPrefix(line, []byte{'!'}) || bytes.Contains(line, []byte{'/'}) {
 			continue
+		}
+
+		if bytes.HasPrefix(line, []byte{'|', '|'}) {
+			rule := parseBlock(line)
+			if rule != nil {
+				rules = append(rules, rule)
+			}
+		} else if bytes.HasPrefix(line, []byte{'@', '@'}) {
+			rule := parseAllow(line)
+			if rule != nil {
+				rules = append(rules, rule)
+			}
+		} else if bytes.Contains(line, []byte{' '}) {
+			rule := parseExactHost(line)
+			if rule != nil {
+				rules = append(rules, rule)
+			}
 		}
 	}
 
-	return nil
+	return rules, nil
 }
