@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	Blocker "github.com/anmol1115/AdPhantom/internal/blocker"
 	helper "github.com/anmol1115/AdPhantom/internal/dns"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
 	Resolver "github.com/anmol1115/AdPhantom/internal/resolver"
@@ -49,6 +50,12 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 		return
 	}
 
+	fl, err := Blocker.FromContext(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
 	b := make([]byte, 2048)
 	for {
 		logger.Debug("UDP: Reading byte length of request")
@@ -70,15 +77,20 @@ func handleUDPConn(ctx context.Context, conn *net.UDPConn) {
 			return
 		}
 
-		logger.Debug("UDP: Resolving domain")
-		resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
-
 		var response []byte
-		if err != nil {
-			logger.Error(err.Error())
-			response = helper.BuildNXDomain(b[:n])
+		rule := fl.Match(name)
+		if rule.Type == Blocker.ExactAllow || rule.Type == Blocker.WildcardAllow {
+			logger.Debug("UDP: Resolving domain")
+			resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
+
+			if err != nil {
+				logger.Error(err.Error())
+				response = helper.BuildNXDomain(b[:n])
+			} else {
+				response = helper.BuildResponse(b[:n], resolvedAddr)
+			}
 		} else {
-			response = helper.BuildResponse(b[:n], resolvedAddr)
+			response = helper.BuildNXDomain(b[:n])
 		}
 
 		logger.Debug("UDP: Sending response")

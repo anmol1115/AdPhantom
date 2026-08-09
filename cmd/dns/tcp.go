@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 
+	Blocker "github.com/anmol1115/AdPhantom/internal/blocker"
 	helper "github.com/anmol1115/AdPhantom/internal/dns"
 	Logger "github.com/anmol1115/AdPhantom/internal/logger"
 	Resolover "github.com/anmol1115/AdPhantom/internal/resolver"
@@ -66,6 +67,12 @@ func handleTCPConn(ctx context.Context, conn net.Conn) {
 		return
 	}
 
+	fl, err := Blocker.FromContext(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
 	requestLength := make([]byte, 2)
 	for {
 		logger.Debug("TCP: Reading byte length of request")
@@ -102,15 +109,20 @@ func handleTCPConn(ctx context.Context, conn net.Conn) {
 			return
 		}
 
-		logger.Debug("TCP: Resolving domain")
-		resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
-
 		var tmp []byte
-		if err != nil {
-			logger.Error(err.Error())
-			tmp = helper.BuildNXDomain(msg)
+		rule := fl.Match(name)
+		if rule.Type == Blocker.ExactAllow || rule.Type == Blocker.WildcardAllow {
+			logger.Debug("TCP: Resolving domain")
+			resolvedAddr, err := resolver.Resolve(ctx, name, qtype)
+
+			if err != nil {
+				logger.Error(err.Error())
+				tmp = helper.BuildNXDomain(msg)
+			} else {
+				tmp = helper.BuildResponse(msg, resolvedAddr)
+			}
 		} else {
-			tmp = helper.BuildResponse(msg, resolvedAddr)
+			tmp = helper.BuildNXDomain(msg)
 		}
 
 		logger.Debug("TCP: Sending response")

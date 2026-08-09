@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = blocker.LoadFilterRules(cfg.Filter.Lists)
+	fl, err := blocker.LoadFilterRules(cfg.Filter.Lists)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,6 +45,7 @@ func main() {
 
 	ctx = Logger.WithLogger(ctx, logger)
 	ctx = resolver.WithResolver(ctx, res)
+	ctx = blocker.WithFilterList(ctx, fl)
 
 	go tcpListener(ctx)
 	go udpListener(ctx)
