@@ -7,12 +7,6 @@ import (
 	"path/filepath"
 )
 
-type FilterList struct {
-	exactRule    map[string]*Rule
-	wildcardRule map[string][]*Rule
-	fallbackRule []*Rule
-}
-
 func LoadFilterRules(path string) (*FilterList, error) {
 	filterList := &FilterList{
 		exactRule:    make(map[string]*Rule),
