@@ -3,6 +3,10 @@ package blocker
 import (
 	"bytes"
 	"net"
+	"path"
+	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 type RuleType int
@@ -22,6 +26,76 @@ type Rule struct {
 	Shortcut string
 }
 
+type FilterList struct {
+	exactRule    map[string]*Rule
+	wildcardRule map[string][]*Rule
+	fallbackRule []*Rule
+}
+
+func (fl *FilterList) Match(query string) *Rule {
+	query = strings.ToLower(strings.TrimRight(query, "."))
+
+	// Exact match
+	if rule := fl.exactQueryMatch(query); rule != nil {
+		return rule
+	}
+
+	// Wildcard Match
+	if rule := fl.wildcardQueryMatch(query); rule != nil {
+		return rule
+	}
+
+	return fl.fallbackQueryMatch(query)
+}
+
+func (fl *FilterList) exactQueryMatch(query string) *Rule {
+	tld_plus_one, _ := publicsuffix.EffectiveTLDPlusOne(query)
+	sample_query := query
+	for {
+		if rule, found := fl.exactRule[sample_query]; found {
+			return rule
+		}
+		index := strings.Index(sample_query, ".")
+		if sample_query == tld_plus_one || index == -1 {
+			break
+		}
+		sample_query = sample_query[index+1:]
+	}
+
+	return nil
+}
+
+func (fl *FilterList) wildcardQueryMatch(query string) *Rule {
+	for shortcut, rules := range fl.wildcardRule {
+		if strings.Contains(query, shortcut) {
+			for _, rule := range rules {
+				matched, err := path.Match(rule.Pattern, query)
+				if err != nil {
+					continue
+				}
+				if matched {
+					return rule
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (fl *FilterList) fallbackQueryMatch(query string) *Rule {
+	for _, rule := range fl.fallbackRule {
+		matched, err := path.Match(rule.Pattern, query)
+		if err != nil {
+			continue
+		}
+		if matched {
+			return rule
+		}
+	}
+	return nil
+}
+
 func parseBlock(line []byte) *Rule {
 	domain := line[2:]
 	domain = bytes.TrimSuffix(domain, []byte{'^'})
@@ -31,9 +105,6 @@ func parseBlock(line []byte) *Rule {
 
 	if bytes.Contains(domain, []byte{'*'}) {
 		shortcut = getShortcut(domain)
-	}
-
-	if len(shortcut) > 0 {
 		rule = &Rule{
 			Type:     WildcardBlock,
 			Shortcut: string(shortcut),
@@ -60,9 +131,6 @@ func parseAllow(line []byte) *Rule {
 
 	if bytes.Contains(domain, []byte{'*'}) {
 		shortcut = getShortcut(domain)
-	}
-
-	if len(shortcut) > 0 {
 		rule = &Rule{
 			Type:     WildcardAllow,
 			Shortcut: string(shortcut),

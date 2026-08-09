@@ -7,28 +7,53 @@ import (
 	"path/filepath"
 )
 
-func LoadFilterRules(path string) error {
+type FilterList struct {
+	exactRule    map[string]*Rule
+	wildcardRule map[string][]*Rule
+	fallbackRule []*Rule
+}
+
+func LoadFilterRules(path string) (*FilterList, error) {
+	filterList := &FilterList{
+		exactRule:    make(map[string]*Rule),
+		wildcardRule: make(map[string][]*Rule),
+	}
+
 	pathInfo, err := os.Stat(path)
 	if err != nil {
-		return err
+		return filterList, err
 	}
 
 	if !pathInfo.IsDir() {
-		return errors.New("Filter list path should be an accessible directory")
+		return filterList, errors.New("Filter list path should be an accessible directory")
 	}
 
 	filterFiles, err := os.ReadDir(path)
 	if err != nil {
-		return err
+		return filterList, err
 	}
+
 	for _, file := range filterFiles {
-		_, err := parseFile(filepath.Join(path, file.Name()))
+		rules, err := parseFile(filepath.Join(path, file.Name()))
 		if err != nil {
-			return err
+			return filterList, err
+		}
+
+		for _, rule := range rules {
+			switch rule.Type {
+			case ExactAllow, ExactBlock, ExactHost:
+				filterList.exactRule[rule.Domain] = rule
+			default:
+				if rule.Shortcut == "" {
+					filterList.fallbackRule = append(filterList.fallbackRule, rule)
+				} else {
+					filterList.wildcardRule[rule.Shortcut] = append(filterList.wildcardRule[rule.Shortcut], rule)
+				}
+			}
 		}
 	}
 
-	return nil
+	return filterList, nil
 }
 
 func parseFile(path string) ([]*Rule, error) {

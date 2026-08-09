@@ -29,7 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = blocker.LoadFilterRules(cfg.Filter.Lists)
+	_, err = blocker.LoadFilterRules(cfg.Filter.Lists)
 	if err != nil {
 		log.Fatal(err)
 	}
